@@ -86,7 +86,7 @@ class StepsPaginator(pages.Paginator):
             step_description = step["step_description"]
             file_name = f"step{current_step}.png"
             if is_formula:
-                step_formula_or_code = f"$${step_formula_or_code}$$"
+                step_formula_or_code = HandleMessage.correct_equation(step_formula_or_code)
                 latex2image(step_formula_or_code, file_name)
                 with open(file_name, "rb") as f:
                     files = [discord.File(f, filename=file_name)]

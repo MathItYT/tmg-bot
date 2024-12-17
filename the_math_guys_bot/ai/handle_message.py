@@ -62,3 +62,14 @@ class HandleMessage:
             ],
         )
         return response.choices[0].message.content
+
+    @staticmethod
+    def correct_equation(equation: str) -> str:
+        response = client.chat.completions.create(
+            model="gpt-4o-2024-11-20",
+            messages=[
+                {"role": "system", "content": "Corrige la fórmula en formato LaTeX, debes poner modo matemático entre dólares, solo pasa la fórmula, no rellenes con nada más."},
+                {"role": "user", "content": [{"type": "text", "text": equation}]}
+            ],
+        )
+        return response.choices[0].message.content
