@@ -10,7 +10,6 @@ python = ">=3.10"
 py-cord = {extras = ["voice"], version = "^2.6.1"}
 openai = "^1.57.0"
 python-dotenv = "^1.0.1"
-matplotlib = "^3.10.0"
 
 [tool.poetry.scripts]
 the-math-guys-bot = "the_math_guys_bot.__main__:main"

@@ -57,7 +57,7 @@ class HandleMessage:
         response = client.chat.completions.create(
             model="gpt-4o-2024-11-20",
             messages=[
-                {"role": "system", "content": "Resalta el código en formato Markdown según el lenguaje, solo pasa el código, no rellenes con nada más."},
+                {"role": "system", "content": "Resalta el código en formato Markdown según el lenguaje si no está resaltado, solo pasa el código, no rellenes con nada más."},
                 {"role": "user", "content": [{"type": "text", "text": code}]}
             ],
         )
@@ -68,7 +68,7 @@ class HandleMessage:
         response = client.chat.completions.create(
             model="gpt-4o-2024-11-20",
             messages=[
-                {"role": "system", "content": "Corrige la fórmula en formato LaTeX, debes poner modo matemático entre dólares, solo pasa la fórmula, no rellenes con nada más."},
+                {"role": "system", "content": "Haz un documento LaTeX entero con la fórmula escrita, del tipo `standalone`. Solo pasa el documento, no rellenes con nada más, ni resaltes el código del documento."},
                 {"role": "user", "content": [{"type": "text", "text": equation}]}
             ],
         )
