@@ -9,7 +9,7 @@ client: OpenAI = OpenAI()
 
 
 class Step(BaseModel):
-    step_formula_or_code: str = Field(..., title="Fórmula o código", description="Fórmula o código a utilizar en el paso. Las fórmulas deben ir en formato LaTeX sin dólares, y los códigos deben ir en formato de bloque de código resaltado según el lenguaje.")
+    step_formula_or_code: str | None = Field(..., title="Fórmula o código", description="Fórmula o código a utilizar en el paso. Las fórmulas deben ir en formato LaTeX sin dólares, y los códigos deben ir en formato de bloque de código resaltado según el lenguaje. Si no hay fórmula o código, este campo debe estar vacío.")
     step_description: str = Field(..., title="Descripción", description="Descripción del paso a seguir, sin ningún texto matemático o código.")
     is_formula: bool = Field(..., title="Es fórmula", description="Indica si el paso es una fórmula o código. Es verdadero si es fórmula, y falso si es código.")
 
