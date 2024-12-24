@@ -69,7 +69,7 @@ class HandleMessage:
         response = client.chat.completions.create(
             model="gpt-4o-2024-11-20",
             messages=[
-                {"role": "system", "content": "Haz un documento LaTeX entero con la fórmula escrita, del tipo `standalone`. No rellenes con nada más."},
+                {"role": "system", "content": "Haz un documento LaTeX entero con la fórmula escrita, del tipo `standalone`. No rellenes con nada más. Recuerda que las fórmulas deben ir en formato LaTeX con dólares delimitando."},
                 {"role": "user", "content": [{"type": "text", "text": equation}]}
             ],
         )
