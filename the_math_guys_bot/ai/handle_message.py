@@ -76,6 +76,6 @@ class HandleMessage:
         return (
             response.choices[0].message.content
             .replace("```latex", "")
-            .replace("```", "")
             .replace("```tex", "")
+            .replace("```", "")
         )
