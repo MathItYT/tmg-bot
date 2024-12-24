@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -68,8 +69,13 @@ class HandleMessage:
         response = client.chat.completions.create(
             model="gpt-4o-2024-11-20",
             messages=[
-                {"role": "system", "content": "Haz un documento LaTeX entero con la fórmula escrita, del tipo `standalone`. Solo pasa el documento, no rellenes con nada más, ni resaltes el código del documento."},
+                {"role": "system", "content": "Haz un documento LaTeX entero con la fórmula escrita, del tipo `standalone`. No rellenes con nada más."},
                 {"role": "user", "content": [{"type": "text", "text": equation}]}
             ],
         )
-        return response.choices[0].message.content
+        return (
+            response.choices[0].message.content
+            .replace("```latex", "")
+            .replace("```", "")
+            .replace("```tex", "")
+        )
