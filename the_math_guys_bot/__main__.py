@@ -12,7 +12,6 @@ def main() -> None:
     bot.load_extension("the_math_guys_bot.cogs.ai")
     bot.load_extension("the_math_guys_bot.cogs.on_ready")
     bot.load_extension("the_math_guys_bot.cogs.diagram")
-    bot.load_extension("the_math_guys_bot.cogs.challenge")
     bot.run(os.getenv("DISCORD_TOKEN"))
 
 
