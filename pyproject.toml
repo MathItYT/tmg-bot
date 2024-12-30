@@ -6,10 +6,12 @@ authors = ["MathItYT <benjamin.ubilla@uc.cl>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10"
+python = ">=3.10,<3.13"
 py-cord = {extras = ["voice"], version = "^2.6.1"}
-openai = "^1.57.0"
+openai = "^1.58.1"
 python-dotenv = "^1.0.1"
+manimgl = "^1.7.2"
+setuptools = "^75.6.0"
 
 [tool.poetry.scripts]
 the-math-guys-bot = "the_math_guys_bot.__main__:main"

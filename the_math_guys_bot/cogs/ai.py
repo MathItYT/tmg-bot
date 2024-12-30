@@ -1,4 +1,3 @@
-import base64
 import subprocess
 from typing import Any
 
@@ -6,6 +5,7 @@ import discord
 from discord.ext import commands, pages
 
 from the_math_guys_bot.ai.handle_message import HandleMessage
+from the_math_guys_bot.utils.get_images_from_message import get_images_from_message
 
 
 def latex2image(
@@ -16,19 +16,6 @@ def latex2image(
         f.write(latex_expression)
     subprocess.run(["latex", "-interaction=nonstopmode", "-shell-escape", "temp.tex"])
     subprocess.run(["dvipng", "-T", "tight", "-D", "300", "-o", image_name, "temp.dvi"])
-
-
-async def get_images_from_message(message: discord.Message) -> list[str]:
-    result = []
-    for attachment in message.attachments:
-        content_type = attachment.content_type
-        if content_type.startswith("image/"):
-            b64 = base64.b64encode(await attachment.read()).decode("utf-8")
-            result.append(f"data:{content_type};base64,{b64}")
-    if message.reference:
-        reply_message = await message.channel.fetch_message(message.reference.message_id)
-        result.extend(await get_images_from_message(reply_message))
-    return result
 
 
 class StepsPaginator(pages.Paginator):
