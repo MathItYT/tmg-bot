@@ -8,14 +8,31 @@ from the_math_guys_bot.ai.handle_message import HandleMessage
 from the_math_guys_bot.utils.get_images_from_message import get_images_from_message
 
 
+LATEX_TEMPLATE: str = """\\documentclass[preview]{{standalone}}
+\\usepackage[spanish]{{babel}}
+\\usepackage{{amsmath}}
+\\usepackage{{amssymb}}
+\\usepackage{{xcolor}}
+
+\\definecolor{{bg}}{{HTML}}{{282B30}}
+\\definecolor{{fg}}{{HTML}}{{EBEBEB}}
+
+\\begin{{document}}
+\\pagecolor{{bg}}
+\\color{{fg}}
+$\\displaystyle {expression}$
+\\end{{document}}"""
+
+
 def latex2image(
     latex_expression: str,
     image_name: str,
 ) -> None:
     with open("temp.tex", "w") as f:
-        f.write(latex_expression)
+        f.write(LATEX_TEMPLATE.format(expression=latex_expression))
     subprocess.run(["latex", "-interaction=nonstopmode", "-shell-escape", "temp.tex"])
-    subprocess.run(["dvipng", "-T", "tight", "-D", "300", "-o", image_name, "temp.dvi"])
+    subprocess.run(["dvisvgm", "temp.dvi", "-n", "-b", "min", "-c", "1,1", "-o", image_name.replace(".png", ".svg")])
+    subprocess.run(["inkscape", image_name.replace(".png", ".svg"), "--export-type=png", "--export-height=300", "--export-filename", image_name])
 
 
 class StepsPaginator(pages.Paginator):
@@ -38,13 +55,12 @@ class StepsPaginator(pages.Paginator):
                 embeds = [discord.Embed(description=step_description)]
                 files = None
             elif is_formula:
-                step_formula_or_code = HandleMessage.correct_equation(step_formula_or_code)
                 latex2image(step_formula_or_code, file_name)
                 with open(file_name, "rb") as f:
                     files = [discord.File(f, filename=file_name)]
                 embeds = [discord.Embed(description=step_description).set_image(url=f"attachment://{file_name}")]
             else:
-                embeds = [discord.Embed(description=step_description).add_field(name="Código", value=HandleMessage.highlight_code(step_formula_or_code), inline=False)]
+                embeds = [discord.Embed(description=step_description).add_field(name="Código", value=step_formula_or_code, inline=False)]
                 files = None
             pages_array.append(pages.Page(embeds=embeds, files=files))
         return pages_array
