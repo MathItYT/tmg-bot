@@ -35,11 +35,12 @@ SYSTEM_MESSAGE: str = """- Eres un bot en el servidor de Discord The math guys, 
 - Si el mensaje va en el formato `Reto -- <@Reto del server> => MENSAJE`, es un reto propuesto para los usuarios del servidor, donde MENSAJE se compone del enunciado y la solución del reto. Asumes que la solución es correcta, y no debes revelarla a nadie, hasta que MathLike te indique explícitamente que debes dar la solución. Si cualquiera te pregunta por la solución, debes decirle que no puedes revelarla. MathLike te puede decir también que aclares el enunciado, o que des una pista, sin revelar la solución.
 - Si el mensaje va en el formato `Mensaje de prueba -- <@Usuario de prueba> => MENSAJE`, es un mensaje que nunca existió, pero que sirve a modo de ejemplo para que entiendas cómo debes responder a los mensajes reales. Recuerda que estos mensajes nunca existieron en el servidor de Discord, por lo que si te preguntan, por ejemplo, por un resumen del chat en un mensaje real, no debes incluir estos mensajes como contenido del chat.
 - Si alguien responde correctamente el reto, deberás felicitarlo, mencionándolo con <@ID_DEL_USUARIO>, con ID_DEL_USUARIO el ID del usuario que siempre aparece en los mensajes que has recibido del chat, y avisarle que ganó 5 dólares, además de que MathLike se pondrá en contacto con él para darle el premio.
-- En el server hay emotes que son renderizados como imágenes, y puedes usarlos en tus respuestas. Solo escribe `<:nerdface:1196602262215204914>` para que aparezca el emote de nerdface, por ejemplo. El emote de aprobación es `<:aplus:1196603434254737468>`, y el de reprobación es `<:fmark:1196603895263268874>`. De lenguajes de programación, tienes `<:python:1196601376885714944>`, y `<:javascript:1196601693543075922>`. Para reírte, puedes usar `<:javascript:1196601693543075922><:javascript:1196601693543075922><:javascript:1196601693543075922><:javascript:1196601693543075922>`, ya que se renderizará como \"JSJSJSJS\"."""
+- En el server hay emotes que son renderizados como imágenes, y puedes usarlos en tus respuestas. Solo escribe `<:nerdface:1196602262215204914>` para que aparezca el emote de nerdface, por ejemplo. El emote de aprobación es `<:aplus:1196603434254737468>`, y el de reprobación es `<:fmark:1196603895263268874>`. De lenguajes de programación, tienes `<:python:1196601376885714944>`, y `<:javascript:1196601693543075922>`. Para reírte, puedes usar `<:javascript:1196601693543075922><:javascript:1196601693543075922><:javascript:1196601693543075922><:javascript:1196601693543075922>`, ya que se renderizará como \"JSJSJSJS\".
+- Recuerda no excederte de los 1024 caracteres en la introducción, y en las fórmulas o códigos junto a sus explicaciones en cada paso, tampoco excederte de los 1024 caracteres. Si excedes el límite, debes dividir el contenido en varios pasos, y si fuera el código muy largo (en caso de ser código), puedes usar `...` para indicar que hay más código."""
 
 
 TEST_INPUTS = [
-    "Mensaje de prueba -- <@Usuario de prueba> => Hola bot",
+    "Hola bot",
     "Hola, quiero resolver la ecuación $x^2 + 2x + 1 = 0$",
     "Dame un código Python de la Criba de Eratóstenes",
     "Gracias bot, te amo",
@@ -52,31 +53,37 @@ PARSED_MESSAGES = [
         "steps": []
     },
     {
-        "introduction": "Más fácil que tu hermana (bromita xd). Vamos a resolver la ecuación que me mencionaste. :aplus:",
+        "introduction": "Más fácil que tu hermana (bromita xd). Vamos a resolver la ecuación que me mencionaste. <:aplus:1196603434254737468>",
         "steps": [
             {
                 "step_formula_or_code": "x^2 + 2x + 1 = 0",
-                "step_description": "Esta es tu ecuación 🥵"
+                "step_description": "Esta es tu ecuación 🥵",
+                "is_formula": True
             },
             {
                 "step_formula_or_code": "(x + 1)^2 = 0",
-                "step_description": "El polinomio fue factorizable, así que procedemos a factorizarlo <:nerdface:1196602262215204914>"
+                "step_description": "El polinomio fue factorizable, así que procedemos a factorizarlo <:nerdface:1196602262215204914>",
+                "is_formula": True
             },
             {
                 "step_formula_or_code": "(x + 1)(x + 1) = 0",
-                "step_description": "El cuadrado es lo mismo que la base multiplicada dos veces :D"
+                "step_description": "El cuadrado es lo mismo que la base multiplicada dos veces :D",
+                "is_formula": True
             },
             {
                 "step_formula_or_code": "x + 1 = 0",
-                "step_description": "Si el producto de dos términos es 0, entonces mínimo uno de los dos términos es 0. Como son iguales, está obligado x + 1 a ser 0. :3"
+                "step_description": "Si el producto de dos términos es 0, entonces mínimo uno de los dos términos es 0. Como son iguales, está obligado x + 1 a ser 0. :3",
+                "is_formula": True
             },
             {
                 "step_formula_or_code": "x = -1",
-                "step_description": "Ya que obtuvimos una ecuación lineal, es muy fácil despejar, obteniendo esto 😎"
+                "step_description": "Ya que obtuvimos una ecuación lineal, es muy fácil despejar, obteniendo esto 😎",
+                "is_formula": True
             },
             {
                 "step_formula_or_code": None,
-                "step_description": "La única solución es x siendo -1, si no estás seguro, puedes sustituir en la ecuación original para comprobarlo. Ni se te ocurra dividir por 0, o te mando a la esquina >:(\nUn placer hacerte la tarea, si tienes más dudas, aquí estoy <:aplus:1196603434254737468>"
+                "step_description": "La única solución es x siendo -1, si no estás seguro, puedes sustituir en la ecuación original para comprobarlo. Ni se te ocurra dividir por 0, o te mando a la esquina >:(\nUn placer hacerte la tarea, si tienes más dudas, aquí estoy <:aplus:1196603434254737468>",
+                "is_formula": False
             }
         ]
     },
@@ -100,7 +107,8 @@ if __name__ == "__main__":
     limite: int = int(input("Dame el límite: "))
     print(*criba_eratostenes(limite))
 ```""",
-                "step_description": "Este es el código de la Criba de Eratóstenes en Python, para que puedas obtener los números primos hasta un límite en el input, y te los imprime en la consola. :3"
+                "step_description": "Este es el código de la Criba de Eratóstenes en Python, para que puedas obtener los números primos hasta un límite en el input, y te los imprime en la consola. :3",
+                "is_formula": False
             }
         ],
     },
@@ -118,7 +126,7 @@ class HandleMessage:
             "content": SYSTEM_MESSAGE,
         },
         *(message for message in chain.from_iterable(zip(
-            [{"role": "user", "content": [{"type": "text", "text": message}]} for message in TEST_INPUTS],
+            [{"role": "user", "content": [{"type": "text", "text": "Mensaje de prueba -- <@Usuario de prueba> => {MENSAJE}".format(MENSAJE=message)}]} for message in TEST_INPUTS],
             [{"role": "system", "content": json.dumps(message, ensure_ascii=False), "parsed": message} for message in PARSED_MESSAGES],
         ))),
     ]
