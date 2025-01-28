@@ -8,3 +8,6 @@ temp*
 temp/
 media/
 *.svg
+tasks.json
+inactive_users.json
+thankfulness_points.json

@@ -12,6 +12,9 @@ openai = "^1.58.1"
 python-dotenv = "^1.0.1"
 manimgl = "^1.7.2"
 setuptools = "^75.6.0"
+google-generativeai = "^0.8.3"
+pytube = "^15.0.0"
+google-genai = "^0.6.0"
 
 [tool.poetry.scripts]
 the-math-guys-bot = "the_math_guys_bot.__main__:main"

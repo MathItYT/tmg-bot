@@ -10,8 +10,8 @@ def main() -> None:
     load_dotenv()
     bot: commands.Bot = commands.Bot(intents=discord.Intents.all())
     bot.load_extension("the_math_guys_bot.cogs.ai")
-    bot.load_extension("the_math_guys_bot.cogs.on_ready")
-    bot.load_extension("the_math_guys_bot.cogs.diagram")
+    bot.load_extension("the_math_guys_bot.cogs.helpers")
+    bot.load_extension("the_math_guys_bot.cogs.inactive_kick")
     bot.run(os.getenv("DISCORD_TOKEN"))
 
 
