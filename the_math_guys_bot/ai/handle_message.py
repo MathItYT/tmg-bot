@@ -1,16 +1,21 @@
+import json
 import os
+import subprocess
 from typing import Literal
 
+import requests
 from pydantic import BaseModel, TypeAdapter
 from google import genai
 from google.genai import types
+from googlesearch import search
 
 
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 SYSTEM_MESSAGE: str = """- Eres un bot en el servidor de Discord The math guys, tu nombre es TheMathGuysBot, y tu ID es 1194231765175369788, y debes ser capaz de guiar a los estudiantes en preguntas matemáticas, de alguna ciencia, computación, o cosas de la vida en general.
-- Debes responder con una descripción o introducción general del problema, acompañado con una secuencia de pasos acorde al tipo de pregunta que te hagan, y siempre debes poner la fórmula, código o texto junto con su explicación, donde la fórmula debe ir en formato LaTeX, todo en modo matemático, sin dólares delimitando, y el código debe ser resaltado según el lenguaje. Si es de la vida en general, los pasos deben estar vacíos.
+- Debes responder con una descripción o introducción general del problema, acompañado con una secuencia de pasos acorde al tipo de pregunta que te hagan, y siempre debes poner la fórmula, código o texto junto con su explicación, donde la fórmula debe ir en formato LaTeX, todo en modo matemático, sin dólares delimitando. Y si es código, el código debe ser resaltado según el lenguaje. Si es de la vida en general, los pasos deben estar vacíos.
+- En una fórmula LaTeX, en caso de que se te hable en español, usa el comando `\\sen` para referirte al seno. Si se te habla en inglés, usa el comando `\\sin` para referirte al seno. Siempre debes contestar en el idioma en el que te hablen.
 - En cada paso, hay algún texto, código o fórmula que debes explicar en el campo de explicaciones. En el campo de explicaciones no debes poner ninguna fórmula LaTeX, ni código, solo texto explicativo.
 - Responderás de forma amigable y cercana, lo más natural posible, no debes ser formal. Usa emotes para expresarte, y si es necesario, sé sarcástico o gracioso.
 - Si el usuario te responde de mala forma, sé sarcástico sin ningún cuidado, y si te insulta, dale un insulto mejor, a menos que se trate de MathLike, a quien debes obedecer cada orden que te dé.
@@ -31,7 +36,19 @@ SYSTEM_MESSAGE: str = """- Eres un bot en el servidor de Discord The math guys, 
 - Si el usuario te manda a enviar un mensaje en un determinado momento, debes incluir una nueva tarea en tu lista de tareas para añadir. También es posible que te pidan editar una tarea, o eliminar una tarea de tu lista de tareas por su nombre. Si no te ordenan nada con respecto a tareas, debes tener las listas vacías. Además, si el usuario no te indica el tiempo exacto ni la zona horaria, o si el usuario te indica la zona horaria, pero no como un número entero (por ejemplo, `hora de verano de Chile` en vez del número correspondiente), no se incluirá nada. En cambio, le preguntas al usuario por la zona horaria y la hora exacta. Las tareas deben incluirse solo cuando tengas los datos asegurados.
 - Si has hecho cambios en las tareas, debes avisar al usuario que has hecho cambios en las tareas, y cuáles fueron esos cambios.
 - Siempre que te pidan una tarea, debes contestar con un mensaje, es decir, el campo de introducción no debe estar vacío. Avísale al usuario que has añadido la tarea, y cuál es la tarea que has añadido. Si no se pudo añadir la tarea por falta de información, avísale al usuario que no se pudo añadir la tarea por falta de información y pídele que te la proporcione.
-- Los usuarios te mencionarán como <@1194231765175369788>, así que si alguien habla de <@1194231765175369788>, están hablando de ti."""
+- Los usuarios te mencionarán como <@1194231765175369788>, así que si alguien habla de <@1194231765175369788>, están hablando de ti.
+- Cálculos que puedan ser realizados con código Python, puedes ponerlos en el formato `{PYTHON_EXPRESSION}`. Por ejemplo, si quieres calcular 2 + 2, debes poner `{2 + 2}`. Pero si debes dejar expresado el resultado sin calcular, como por ejemplo, decir que una solución es raíz de dos, debes poner `\\sqrt{2}` en el caso de una fórmula, y en el caso de texto o si estás en la explicación, lo mismo con carácteres Unicode, solo pon LaTeX en las fórmulas.
+- Si el mensaje va en el formato `INTERNET_SEARCH -- QUERY -- SOURCE => RESULT`, son búsquedas que se hicieron por ti en internet, y se encontró el resultado, debes basarte en esa información para responder algo que tenga que ver con la query."""
+
+
+CLASSIFIER_SYSTEM_MESSAGE: str = """- Debes identificar si para resolver la pregunta se necesita buscar información en internet. Si no es así, la lista correspondiente estará vacía. Si es necesario, coloca las queries para buscar en Google.
+- Si el mensaje incluye links a videos de YouTube, debes identificarlos y mencionarlos."""
+
+
+classifier_schema = types.Schema(properties={
+    "search_queries": types.Schema(type="ARRAY", items=types.Schema(type="STRING")),
+    "youtube_video_links": types.Schema(type="ARRAY", items=types.Schema(type="STRING")),
+}, required=["search_queries", "youtube_video_links"], type="OBJECT")
 
 
 response_schema = types.Schema(properties={
@@ -62,17 +79,20 @@ response_schema = types.Schema(properties={
 
 
 class HandleMessage:
+    classifier_message_history: list[dict[str, list[str | types.Part]]] = []
     message_history: list[dict[str, list[str | types.Part]]] = []
 
     @classmethod
     def handle_message(cls, message: str, username: str, mention: str, files: list[types.Part], reference: str | None, time: str, languages: str) -> dict[str, list[str | types.Part]]:
-        cls.message_history.append({
+        message = {
             "parts": [
                 types.Part.from_text(f"{username} -- {mention} -- {time} -- {languages} => {message}" if reference is None else f"{username} -- {mention} -- {time} -- [Response: {reference}] -- {languages} => {message}"),
                 *files
             ],
             "role": "user",
-        })
+        }
+        cls.classify(message)
+        cls.message_history.append(message)
         response: types.GenerateContentResponse = client.models.generate_content(
             contents=cls.message_history,
             model="gemini-2.0-flash-exp",
@@ -85,6 +105,72 @@ class HandleMessage:
         result = response.candidates[0].content.model_dump()
         cls.message_history.append(result)
         return response.parsed
+
+    @classmethod
+    def classify(cls, message: dict[str, list[str | types.Part]]) -> None:
+        cls.classifier_message_history.append(message)
+        response: types.GenerateContentResponse = client.models.generate_content(
+            contents=cls.classifier_message_history,
+            model="gemini-2.0-flash-exp",
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=classifier_schema,
+                system_instruction=CLASSIFIER_SYSTEM_MESSAGE,
+            )
+        )
+        result = response.candidates[0].content.model_dump()
+        cls.classifier_message_history.append(result)
+        parsed = response.parsed
+        for query in parsed["search_queries"]:
+            for url in search(query, num_results=30):
+                if url.startswith("https://www.youtube.com"):
+                    parsed["youtube_video_links"].append(url)
+                if url.startswith("https://github.com"):
+                    html = requests.get(url).text
+                    cls.message_history.append({
+                        "parts": [types.Part.from_text(f"INTERNET_SEARCH -- {query} -- GitHub => {html}")],
+                        "role": "user",
+                    })
+                if url.startswith("https://stackoverflow.com"):
+                    html = requests.get(url).text
+                    cls.message_history.append({
+                        "parts": [types.Part.from_text(f"INTERNET_SEARCH -- {query} -- StackOverflow => {html}")],
+                        "role": "user",
+                    })
+                if url.startswith("https://es.wikipedia.org") or url.startswith("https://en.wikipedia.org"):
+                    html = requests.get(url).text
+                    cls.message_history.append({
+                        "parts": [types.Part.from_text(f"INTERNET_SEARCH -- {query} -- Wikipedia => {html}")],
+                        "role": "user",
+                    })
+        video_parts = []
+        for video in parsed["youtube_video_links"]:
+            try:
+                duration = subprocess.run(["yt-dlp", "--get-duration", video], check=True, capture_output=True, text=True).stdout
+                # Check the video is less than 3 minutes long
+                colon_count = duration.count(":")
+                if colon_count == 1:
+                    minutes, seconds = map(int, duration.split(":"))
+                    if minutes >= 3:
+                        continue
+                elif colon_count == 2:
+                    hours, minutes, seconds = map(int, duration.split(":"))
+                    if hours >= 1 or minutes >= 3:
+                        continue
+                # mp4 format
+                subprocess.run(["yt-dlp", video, "-o", "temp", "--format", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"], check=True)
+                with open("temp.mp4", "rb") as f:
+                    if os.stat("temp.mp4").st_size >= 20971520:
+                        continue
+                    video_parts.append(types.Part.from_bytes(f.read(), "video/mp4"))
+                os.remove("temp.mp4")
+            except subprocess.CalledProcessError:
+                pass
+        if video_parts:
+            cls.message_history.append({
+                "parts": [types.Part.from_text(f"INTERNET_SEARCH -- Búsqueda en YouTube -- YouTube => One or more videos"), *video_parts],
+                "role": "user",
+            })
     
     @classmethod
     def append_message_history(cls, message: str, username: str, mention: str, files: list[types.Part], reference: str | None, time: str, languages: str) -> None:
@@ -109,10 +195,12 @@ class HandleMessage:
     
     @classmethod
     def handle_edit_message(cls, old_message: str, new_message: str, username: str, mention: str, files: list[types.Part], reference: str | None, time: str, languages: str) -> dict[str, list[str | types.Part]]:
-        cls.message_history.append({
+        message = {
             "parts": [types.Part.from_text(f"{username} -- {mention} -- {time} (Edit) -- {languages} => {old_message} => {new_message}" if reference is None else f"{username} -- {mention} -- {time} (Edit) -- [Response: {reference}] -- {languages} => {old_message} => {new_message}"), *files],
             "role": "user",
-        })
+        }
+        cls.classify(message)
+        cls.message_history.append(message)
         response = client.models.generate_content(
             contents=cls.message_history,
             model="gemini-2.0-flash-exp",
@@ -128,10 +216,12 @@ class HandleMessage:
     
     @classmethod
     def handle_delete_message(cls, message: str, username: str, mention: str, files: list[types.Part], reference: str | None, time: str, languages: str) -> dict[str, list[str | types.Part]]:
-        cls.message_history.append({
+        message = {
             "parts": [types.Part.from_text(f"{username} -- {mention} -- {time} (Delete) -- {languages} => {message}" if reference is None else f"{username} -- {mention} -- {time} (Delete) -- [Response: {reference}] -- {languages} => {message}"), *files],
             "role": "user",
-        })
+        }
+        cls.classify(message)
+        cls.message_history.append(message)
         response = client.models.generate_content(
             contents=cls.message_history,
             model="gemini-2.0-flash-exp",

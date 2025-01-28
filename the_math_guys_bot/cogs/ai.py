@@ -31,7 +31,7 @@ tasks_file = "tasks.json"
 discord_tasks_dict = {}
 if not os.path.exists(tasks_file):
     with open(tasks_file, "w", encoding="utf-8") as f:
-        f.write(json.dumps({}))
+        f.write(json.dumps({}, ensure_ascii=False))
 with open(tasks_file, "r", encoding="utf-8") as f:
     tasks = json.load(f)
 
@@ -42,14 +42,14 @@ def init_tasks(bot: commands.Bot, tasks: dict[str, dict[str, Any]]) -> None:
         hour = task["hour"]
         minute = task["minute"]
         timezone = task["timezone"]
-        user_id = task["user_id"]
+        user_id = str(task["user_id"])
         @discord_tasks.loop(minutes=1)
         async def task_function():
             now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=timezone)))
             if now.minute != minute or now.hour != hour:
                 return
-            channel = bot.get_channel(1045453709221568535)
-            await channel.send(f"<@{user_id}> {message_to_send}")
+            channel = bot.get_channel(1331066003638980760)
+            await channel.send(message_to_send if user_id in message_to_send else f"<@{user_id}> {message_to_send}")
         discord_task = task_function.start()
         discord_tasks_dict[task_name] = discord_task
 
@@ -59,7 +59,7 @@ def add_tasks(bot: commands.Bot, new_tasks: list[dict[str, Any]]) -> None:
         print(task)
         tasks[task["task_name"]] = task
     with open(tasks_file, "w", encoding="utf-8") as f:
-        f.write(json.dumps(tasks))
+        f.write(json.dumps(tasks, ensure_ascii=False))
     init_tasks(bot, {task["task_name"]: task for task in new_tasks})
 
 
@@ -68,7 +68,7 @@ def edit_tasks(bot: commands.Bot, tasks_to_edit: list[dict[str, Any]]) -> None:
         tasks[task["task_name"]] = task
         discord_tasks_dict[task["task_name"]].cancel()
     with open(tasks_file, "w", encoding="utf-8") as f:
-        f.write(json.dumps(tasks))
+        f.write(json.dumps(tasks, ensure_ascii=False))
     init_tasks(bot, {task["task_name"]: task for task in tasks_to_edit})
 
 
@@ -78,7 +78,7 @@ def remove_tasks(_: commands.Bot, tasks_to_remove: list[str]) -> None:
         discord_tasks_dict[task].cancel()
         discord_tasks_dict.pop(task)
     with open(tasks_file, "w", encoding="utf-8") as f:
-        f.write(json.dumps(tasks))
+        f.write(json.dumps(tasks, ensure_ascii=False))
 
 
 def latex2image(
@@ -101,7 +101,7 @@ class StepsPaginator(pages.Paginator):
             timeout=None,
         )
     
-    def get_pages(self) -> list[str]:
+    def get_pages(self) -> list[pages.Page]:
         pages_array = [pages.Page(content=self.introduction)]
         for current_step, step in enumerate(self.steps, start=1):
             step_formula_or_code_type = step["step_formula_text_or_code_type"]
@@ -328,6 +328,7 @@ class AI(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await self.bot.change_presence(activity=discord.Game(name="Demostrar hipótesis de Riemann."))
+        print(tasks)
         init_tasks(self.bot, tasks)
         print(f"Logged in as {self.bot.user}.")
 
