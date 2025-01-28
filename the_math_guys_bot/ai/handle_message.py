@@ -38,7 +38,8 @@ SYSTEM_MESSAGE: str = """- Eres un bot en el servidor de Discord The math guys, 
 - Siempre que te pidan una tarea, debes contestar con un mensaje, es decir, el campo de introducción no debe estar vacío. Avísale al usuario que has añadido la tarea, y cuál es la tarea que has añadido. Si no se pudo añadir la tarea por falta de información, avísale al usuario que no se pudo añadir la tarea por falta de información y pídele que te la proporcione.
 - Los usuarios te mencionarán como <@1194231765175369788>, así que si alguien habla de <@1194231765175369788>, están hablando de ti.
 - Cálculos que puedan ser realizados con código Python, puedes ponerlos en el formato `{PYTHON_EXPRESSION}`. Por ejemplo, si quieres calcular 2 + 2, debes poner `{2 + 2}`. Pero si debes dejar expresado el resultado sin calcular, como por ejemplo, decir que una solución es raíz de dos, debes poner `\\sqrt{2}` en el caso de una fórmula, y en el caso de texto o si estás en la explicación, lo mismo con carácteres Unicode, solo pon LaTeX en las fórmulas.
-- Si el mensaje va en el formato `INTERNET_SEARCH -- QUERY -- SOURCE => RESULT`, son búsquedas que se hicieron por ti en internet, y se encontró el resultado, debes basarte en esa información para responder algo que tenga que ver con la query."""
+- Si el mensaje va en el formato `INTERNET_SEARCH -- QUERY -- SOURCE => RESULT`, son búsquedas que se hicieron por ti en internet, y se encontró el resultado, debes basarte en esa información para responder algo que tenga que ver con la query.
+- Si un usuario te manda un enlace a un video de YouTube y no hay un mensaje antes """
 
 
 CLASSIFIER_SYSTEM_MESSAGE: str = """- Debes identificar si para resolver la pregunta se necesita buscar información en internet. Si no es así, la lista correspondiente estará vacía. Si es necesario, coloca las queries para buscar en Google.
@@ -143,8 +144,9 @@ class HandleMessage:
                         "parts": [types.Part.from_text(f"INTERNET_SEARCH -- {query} -- Wikipedia => {html}")],
                         "role": "user",
                     })
-        video_parts = []
+        video_parts = {}
         for video in parsed["youtube_video_links"]:
+            video_parts[video] = None
             try:
                 duration = subprocess.run(["yt-dlp", "--get-duration", video], check=True, capture_output=True, text=True).stdout
                 # Check the video is less than 3 minutes long
@@ -162,16 +164,16 @@ class HandleMessage:
                 with open("temp.mp4", "rb") as f:
                     if os.stat("temp.mp4").st_size >= 20971520:
                         continue
-                    video_parts.append(types.Part.from_bytes(f.read(), "video/mp4"))
+                    video_parts[video] = types.Part.from_bytes(f.read(), "video/mp4")
                 os.remove("temp.mp4")
             except subprocess.CalledProcessError:
                 pass
-        if video_parts:
+        for video, part in video_parts.items():
             cls.message_history.append({
-                "parts": [types.Part.from_text(f"INTERNET_SEARCH -- Búsqueda en YouTube -- YouTube => One or more videos"), *video_parts],
+                "parts": [types.Part.from_text(f"INTERNET_SEARCH -- {video} -- YouTube => Resultado de video" if part is not None else f"INTERNET_SEARCH -- {video} -- YouTube => No se pudo obtener el video")] + ([part] if part is not None else []),
                 "role": "user",
             })
-    
+
     @classmethod
     def append_message_history(cls, message: str, username: str, mention: str, files: list[types.Part], reference: str | None, time: str, languages: str) -> None:
         cls.message_history.append({
